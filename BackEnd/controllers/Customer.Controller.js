@@ -2,7 +2,7 @@ const Joi = require("joi");
 const bcrypt = require("bcrypt");
 const JWTService = require("../utils/JWTservices"); // Import updated JWTService
 const Customer = require("../models/User.Model");
-const formatWorker = require("../utils/formatWorker");
+const formatCustomer = require("../utils/formatCustomer");
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,25}/;
 
 const customerController = {
@@ -52,7 +52,7 @@ const customerController = {
 
       return res.status(201).json({
         success: true,
-        worker: formatWorker(savedCustomer),
+        customer: formatCustomer(savedCustomer),
         accessToken, // Send the access token in the response as well
         auth: true,
       });
@@ -98,7 +98,7 @@ const customerController = {
 
       return res.status(200).json({
         success: true,
-        worker: formatWorker(customer),
+        customer: formatCustomer(customer),
         accessToken, // Send the access token in the response
         auth: true,
       });

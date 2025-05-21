@@ -30,4 +30,18 @@ router.put(
   auth, // ensure req.user is set
   workerController.updateAvailability
 );
+
+router.get("/workers", workerController.getWorkers);
+
+router.patch(
+  "/profile/update",
+  auth,
+  upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "guaranty", maxCount: 1 },
+    { name: "certificates", maxCount: 5 },
+  ]),
+  workerController.updateProfile
+);
+
 module.exports = router;

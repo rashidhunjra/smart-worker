@@ -56,12 +56,11 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
     reviewCount: {
       type: Number,
       default: 0,
     },
-    availability: [
+    availableSlots: [
       {
         date: {
           type: Date,
@@ -83,7 +82,7 @@ const userSchema = new mongoose.Schema(
     skillsAndExperience: {
       type: String,
     },
-    location: [
+    serviceableLocations: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Location",

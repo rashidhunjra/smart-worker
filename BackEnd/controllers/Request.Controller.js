@@ -6,23 +6,15 @@ const { GMAIL_USER, GMAIL_APP_PASS } = require("../config/index");
 const nodemailer = require("nodemailer");
 
 // ⏰ Cron job: clean up past availability slots every hour
-cron.schedule("0 * * * *", async () => {
+cron.schedule("*/15 * * * *", async () => {
   try {
-    const now = new Date();
     await User.updateMany(
       {},
-      {
-        $pull: {
-          availability: {
-            // remove slots whose date is before today
-            date: { $lt: now.toISOString().split("T")[0] },
-          },
-        },
-      }
+      { $pull: { availability: { date: { $lt: new Date() } } } }
     );
     console.log("Expired availability slots cleaned up.");
-  } catch (error) {
-    console.error("Cron job failed:", error.message);
+  } catch (err) {
+    console.error("Cron job failed:", err);
   }
 });
 
@@ -39,16 +31,23 @@ const requestController = {
         requestedEndTime,
       } = req.body;
       const customerId = req.user._id;
+      // Prevent self-request
+      if (workerId === customerId.toString()) {
+        return res.status(400).json({
+          message: "You cannot request a service from yourself.",
+        });
+      }
 
-      // 1a. Load worker availability
+      // Load worker availability
+      // Load worker availability
       const worker = await User.findById(workerId).select(
-        "availability name email"
+        "availableSlots name email"
       );
       if (!worker) {
         return res.status(404).json({ message: "Worker not found" });
       }
 
-      // 1b. Parse & validate dates/times
+      // Parse & validate dates/times
       const reqDate = moment(requestedDate, "YYYY-MM-DD");
       const reqStart = moment(requestedTime, "HH:mm");
       const reqEnd = moment(requestedEndTime, "HH:mm");
@@ -64,9 +63,9 @@ const requestController = {
           .json({ message: "Start time must be before end time." });
       }
 
-      // 2. Find covering availability slot
-      const slot = worker.availability.find((slot) => {
-        const slotDate = moment(slot.date, "YYYY-MM-DD");
+      // Find covering availability slot
+      const slot = worker.availableSlots.find((slot) => {
+        const slotDate = moment(slot.date);
         const start = moment(slot.startTime, "HH:mm");
         const end = moment(slot.endTime, "HH:mm");
         const sameDay = slotDate.isSame(reqDate, "day");
@@ -81,7 +80,7 @@ const requestController = {
         });
       }
 
-      // 3. Conflict check: no overlapping existing bookings
+      // Conflict check: no overlapping existing bookings
       const conflict = await Request.findOne({
         workerId,
         requestedDate: reqDate.toDate(),
@@ -100,7 +99,7 @@ const requestController = {
         });
       }
 
-      // 4. Save the new request
+      // Save the new request
       const newRequest = new Request({
         customerId,
         workerId,
@@ -112,7 +111,7 @@ const requestController = {
       });
       const savedRequest = await newRequest.save();
 
-      // 5. Notify worker via email
+      // Notify worker via email
       const customer = await User.findById(customerId).select("name");
       const customerName = customer?.name || "A customer";
 
@@ -140,7 +139,7 @@ const requestController = {
         }
       }
 
-      // 6. Respond to client
+      // Respond to client
       return res.status(201).json({
         message: "Request created successfully",
         request: savedRequest,
@@ -149,7 +148,6 @@ const requestController = {
       return next(err);
     }
   },
-
   // 2. Get all requests
   getAllRequests: async (req, res, next) => {
     try {
